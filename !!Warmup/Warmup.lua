@@ -4,11 +4,20 @@
 -- tomchapin - Fixed CreateTitleRegion error so addon works with WoW 7.1 
 -- tomchapin - Renamed addon so it has a zero at the front and hopefully will load first.
 -- tomchapin - Fixed the CreateFrame function (per recommendation from Bezal1)
+-- Forked by ZZumMallen for WoW 11.0 prepatch
+-- ZZumMallen - updated varrios Addon() functions to include the C_AddOns namespace to blizz change and restore functionality
+-- ZZumMallen - added annotations to fix random type and param check errors
+-- ZZumMallen - fixed debugger, timerlocked was not defined and causing errors 
+-- ZZumMallen - fixed debugger reset, was setting the timer to nil and unable to resume
+-- ZZumMallen - updated slashcommand to refer to containerFrame class instead of the name paramter
 
-local containerFrame = CreateFrame("Frame", "WarmupOutputFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+---@type any
+local bdTemplate = BackdropTemplateMixin and "BackdropTemplate" -- this parameter combo was causing errors when used inside the container, redefined as single parameter
+
+local containerFrame = CreateFrame("Frame", "WarmupOutputFrame", UIParent, bdTemplate)
 containerFrame:Hide()
 
-local outputFrame = CreateFrame("ScrollingMessageFrame", "WarmupChatFrame", containerFrame, BackdropTemplateMixin and "BackdropTemplate")
+local outputFrame = CreateFrame("ScrollingMessageFrame", "WarmupChatFrame", containerFrame, bdTemplate)
 outputFrame:SetFontObject("ChatFontNormal")
 outputFrame:SetMaxLines(512)
 
@@ -39,7 +48,7 @@ containerFrame:SetScript("OnShow", function(self)
 	bg:SetAlpha(0.9)
 	--bg:SetVertexColor(204/255, 225/255, 1)
 
-	local close = CreateFrame("Button", nil, self, "UIPanelCloseButton", BackdropTemplateMixin and "BackdropTemplate")
+	local close = CreateFrame("Button", nil, self, "UIPanelCloseButton", bdTemplate)
 	close:SetPoint("TOPRIGHT")
 
 	local title = self:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -91,11 +100,18 @@ local threshcolors = {"|cffff0000", "|cffff8000", "|cffffff80", "|cff80ff80"}
 local sv, intransit, reloading, longestaddon, biggestaddon, varsloadtime, logging, mostgarbageaddon, leftworld
 local memstack = {initmem}
 
-local timerIsLocked
+local timerIsLocked = debugprofilestop()
+local previousTimer
+
 local function start()
+	-- resets the timer - do not us debugprofilestart() for ... reasons. Use debugprofile stop like you would GetTime()
+	if previousTimer then
+		previousTimer = nil
+	end
+
 	if timerIsLocked then
-	--	outputFrame:AddMessage("ATTEMPTED TO START TIMER WHILE LOCKED")
-	--	outputFrame:AddMessage(debugstack())
+		outputFrame:AddMessage("ATTEMPTED TO START TIMER WHILE LOCKED")
+		outputFrame:AddMessage(debugstack())
 	end
 
 	timerIsLocked = debugprofilestop()
@@ -103,13 +119,13 @@ end
 
 local function stop()
 	if not timerIsLocked then
-	--	outputFrame:AddMessage("ATTEMPTED TO STOP TIMER WHILE UNLOCKED")
-	--	outputFrame:AddMessage(debugstack())
+		outputFrame:AddMessage("ATTEMPTED TO STOP TIMER WHILE UNLOCKED")
+		outputFrame:AddMessage(debugstack())
 	end
 
 	local elapsed = debugprofilestop() - timerIsLocked
-	timerIsLocked = nil
-	return elapsed
+	previousTimer = timerIsLocked -- redefines old timer for reset
+	return elapsed, previousTimer
 end
 
 start()
@@ -185,10 +201,11 @@ do
 end
 
 do
-	for i=1,GetNumAddOns() do
-		if IsAddOnLoaded(i) then
-			if GetAddOnInfo(i) ~= "!!Warmup" then
-				outputFrame:AddMessage("Addon loaded before Warmup: ".. GetAddOnInfo(i))
+	-- These functions were all added to the C_AddOns namespace and no longer work unless parent is referenced
+	for i=1,C_AddOns.GetNumAddOns() do
+		if C_AddOns.IsAddOnLoaded(i) then
+			if C_AddOns.GetAddOnInfo(i) ~= "!!Warmup" then
+				outputFrame:AddMessage("Addon loaded before Warmup: " .. C_AddOns.GetAddOnInfo(i))
 			end
 		end
 	end
@@ -289,7 +306,7 @@ function Warmup:VARIABLES_LOADED()
 	SLASH_RELOADNODISABLE1 = "/rlnd"
 ]]
 	SlashCmdList["WARMUP"] = function()
-		WarmupOutputFrame:SetShown(not WarmupOutputFrame:IsShown())
+		containerFrame:SetShown(not containerFrame:IsShown()) -- was not working with the containerFrame name identifier
 	end
 
 	SLASH_WARMUP1 = "/wu"
@@ -308,7 +325,7 @@ function Warmup:PLAYER_LOGIN()
 	else
 		C_Timer.After(2, function() -- auto open window on login, delay required because of UISpecialFrames
 			if not UnitAffectingCombat("player") then
-				WarmupOutputFrame:Show()
+				containerFrame:Show()
 			end
 		end)
 	end

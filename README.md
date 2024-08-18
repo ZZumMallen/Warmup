@@ -21,6 +21,8 @@ Don't leave Warmup enabled every time you log in. The changes for GC data will h
 
 [Fixed for WoW 7.1](https://github.com/tomchapin/Warmup) by tomchapin
 
+[Fixed for WoW 11.0](https://github.com/ZZumMallen/Warmup) by ZZumMallen
+
 ## Download Locations
 
 https://mods.curse.com/addons/wow/255272-warmup
