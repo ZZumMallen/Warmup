@@ -110,8 +110,8 @@ local function start()
 	end
 
 	if timerIsLocked then
-		outputFrame:AddMessage("ATTEMPTED TO START TIMER WHILE LOCKED")
-		outputFrame:AddMessage(debugstack())
+		-- outputFrame:AddMessage("ATTEMPTED TO START TIMER WHILE LOCKED")
+		-- outputFrame:AddMessage(debugstack())
 	end
 
 	timerIsLocked = debugprofilestop()
@@ -119,8 +119,8 @@ end
 
 local function stop()
 	if not timerIsLocked then
-		outputFrame:AddMessage("ATTEMPTED TO STOP TIMER WHILE UNLOCKED")
-		outputFrame:AddMessage(debugstack())
+		-- outputFrame:AddMessage("ATTEMPTED TO STOP TIMER WHILE UNLOCKED")
+		-- outputFrame:AddMessage(debugstack())
 	end
 
 	local elapsed = debugprofilestop() - timerIsLocked
